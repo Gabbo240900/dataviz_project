@@ -53,6 +53,17 @@ df_airplanes = df_airplanes.drop('type', axis=1)
 
 df_airplanes['Date'] = (pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y', errors='coerce'))
 
+# Create a boxplot to check for outliers
+fig, ax = plt.subplots()
+ax.boxplot(df_airplanes['Total_Flights'])
+
+# Add labels and title
+ax.set_title('Boxplot ')
+ax.set_ylabel('Total_Flights')
+
+plt.show()
+# It seems like there are few observations in which there are over than 1000 flights reaching a top number 2000 in May '96
+
 
 
 
