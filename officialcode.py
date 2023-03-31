@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import matplotlib.pyplot as plt
-
+import seaborn as sns
 
 # Let's read the dataset and print an initial overview
 df_airplanes = pd.read_csv('International_Report_Departures.csv')
@@ -63,12 +63,33 @@ ax.set_ylabel('Total_Flights')
 
 plt.show()
 # It seems like there are few observations in which there are over than 1000 flights reaching a top number 2000 in May '96
+# These should not be removed, but more analyzed to check why there have been so many fligths in those days
 
 
 
 
 
+# Barplot with airports and number of fligths for each ariport
 
+df_us_fligths = df_airplanes[['US_airport_code','Total_Flights']].groupby(by='US_airport_code').sum()
+df_foreign_fligths = df_airplanes[['Foreign_airport_code','Total_Flights']].groupby(by='Foreign_airport_code').sum()
+
+df_fligths_count  = pd.concat([df_foreign_fligths, df_us_fligths])
+df_fligths_count.reset_index(inplace=True)
+
+df_fligths_count.sort_values(by='Total_Flights', ascending = False, inplace=True)
+
+top_10_airp = df_fligths_count.head(10)
+
+
+
+
+
+sns.barplot(data=top_10_airp, x="index", y="Total_Flights")
+plt.xlabel('Airport')
+plt.title('Fligths per Airport')
+plt.ticklabel_format(style = 'plain', axis = 'y')
+plt.show()
 
 
 
