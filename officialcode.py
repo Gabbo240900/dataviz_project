@@ -159,6 +159,25 @@ df_iata = pd.merge(df_iata, df_us_fligths, on='iata', how='outer')
 df_iata.dropna(subset=['icao'], inplace=True)
 
 
+
+# # AGGIUNGI A QUELLI DI PRIMA SCRIVENDO A MANO LATITUDINE E LONGITUDINE
+
+
+# df_us_fligths.columns = ['US_airport_code', 'n_fligths']
+# df_missed.columns = ['US_airport_code']
+
+# df_missed = pd.merge(df_missed, df_us_fligths)
+
+
+
+
+# airports['LKE']
+
+
+
+
+
+
 df_heat_map = pd.concat([df_lid, df_iata])# final dataset with all catched airports
 
 lat_long_fligths = df_heat_map.iloc[:, [7, 8,11]] # dataset with only the information we need for the heatmap
@@ -174,6 +193,40 @@ map_obj = folium.Map(location = [38.27312, -98.5821872], zoom_start = 5) #where 
 HeatMap(lat_long_fligths).add_to(map_obj)
 
 map_obj.save(r"us_fligths_map.html") # we saved the figure to visualize the result
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
