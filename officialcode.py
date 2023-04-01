@@ -70,20 +70,25 @@ plt.show()
 
 
 # Barplot with airports and number of fligths for each ariport
-df_us_fligths = df_airplanes[['US_airport_code','Total_Flights']].groupby(by='US_airport_code').sum()
-df_foreign_fligths = df_airplanes[['Foreign_airport_code','Total_Flights']].groupby(by='Foreign_airport_code').sum()
+df_us_fligths = df_airplanes[['US_airport_code','Total_Flights']].groupby(by='US_airport_code').sum() 
+# group by US_airport and sum the number of fligths 
+df_foreign_fligths = df_airplanes[['Foreign_airport_code','Total_Flights']].groupby(by='Foreign_airport_code').sum() 
+# group by foreign and sum the number of fligths 
 
 df_fligths_count  = pd.concat([df_foreign_fligths, df_us_fligths])
+# concatenate the two datasets to get a single one with all the fligths
 df_fligths_count.reset_index(inplace=True)
+# reset the index to set the airport code as a column
 
 df_fligths_count.sort_values(by='Total_Flights', ascending = False, inplace=True)
+# Sort based on fligths for creating a barplot of the top 10 airports
 
 top_10_airp = df_fligths_count.head(10)
+# New dataset with only the top 10 airports
 
 
-
-
-sns.barplot(data=top_10_airp, x="index", y="Total_Flights")
+# Barplot with seaborn 
+sns.barplot(data=top_10_airp, x="index", y="Total_Flights") 
 plt.xlabel('Airport')
 plt.title('Fligths per Airport')
 plt.ticklabel_format(style = 'plain', axis = 'y')
@@ -91,26 +96,42 @@ plt.show()
 
 
 
-df_us_fligths.reset_index(inplace=True)
-import airportsdata
 
+# ----- Now we will start creating a heatmap of the US Fligths based on total fligths -----
+df_us_fligths.reset_index(inplace=True) #reset index
+
+
+# we retrived the coordinates by using another dataframe that links the airport identification name to the coordinates
+# pip install airportsdata
+import airportsdata # new library for retrieving the coordinates
+
+# We discovered that there are various formats for airport codes
+# we have both LID format and IATA format. 
+# In the next step we will try to catch as most airports as possible
+
+
+# Dictionary with all the infoprmation we need 
 airports = airportsdata.load('LID') 
 
-location = []
-missed = []
+location = [] #empty list to store all the airports that have an ariport code in 'LID' format
+missed = [] #list with all missed airports
+
+# error managemtn for loop, to get all the location with LID format
 for index, row in df_us_fligths.iterrows():
     try:
         location.append(airports[row['US_airport_code']])
     except KeyError:
-        missed.append([row['US_airport_code']])
+        missed.append([row['US_airport_code']]) # we checked for all the airport ids that didn't match the new dataframe
         continue
 
 
-df_missed = pd.DataFrame(missed)
-df_missed.columns = ['US_airport_code']
+df_missed = pd.DataFrame(missed) # all missed airports will now be looped again to check if they have IATA format code
+df_missed.columns = ['US_airport_code'] #rename the column
 
-location2=[]
-missed=[]
+location2=[]#empty list to store all the airports that have an ariport code in 'LID' format
+missed=[] # new empty missed list
+
+# Now we try to catch all IATA format airport codes
 airports = airportsdata.load('IATA')
 for index, row in df_missed.iterrows():
     try:
@@ -119,38 +140,41 @@ for index, row in df_missed.iterrows():
         missed.append([row['US_airport_code']])
         continue
 
-df_location = pd.DataFrame(location)
-df_location2 = pd.DataFrame(location2)
+df_lid = pd.DataFrame(location)# Dataframe with all LID format codes
+df_iata = pd.DataFrame(location2)# Dataframe with all IATA format codes
+df_missed = pd.DataFrame(missed) # Dataframe with all missed airport codes
 
 
 
 
-
-
+# we created a new df that merges the coordinates with the airport id and the total number of flights
+# Repeated both for LID and IATA format code
 df_us_fligths.columns = ['lid', 'n_fligths']
-df_location = pd.merge(df_location, df_us_fligths, on='lid', how='outer')
-df_location.dropna(subset=['icao'], inplace=True)
+df_lid = pd.merge(df_lid, df_us_fligths, on='lid', how='outer')
+df_lid.dropna(subset=['icao'], inplace=True)
 
 
 df_us_fligths.columns = ['iata', 'n_fligths']
-df_location2 = pd.merge(df_location2, df_us_fligths, on='iata', how='outer')
-df_location2.dropna(subset=['icao'], inplace=True)
+df_iata = pd.merge(df_iata, df_us_fligths, on='iata', how='outer')
+df_iata.dropna(subset=['icao'], inplace=True)
 
 
-df_heat_map = pd.concat([df_location, df_location2])
+df_heat_map = pd.concat([df_lid, df_iata])# final dataset with all catched airports
 
-lat_long_fligths = df_location.iloc[:, [7, 8,11]]
+lat_long_fligths = df_heat_map.iloc[:, [7, 8,11]] # dataset with only the information we need for the heatmap
+# new library for the heatmap creation 
+
+# pip install folium
 import folium
-
 from folium.plugins import HeatMap
 
-map_obj = folium.Map(location = [38.27312, -98.5821872], zoom_start = 5)
-
+map_obj = folium.Map(location = [38.27312, -98.5821872], zoom_start = 5) #where to make the map start
 
 
 HeatMap(lat_long_fligths).add_to(map_obj)
 
-map_obj.save(r"/Users/gabrieledipalma/Documents/GitHub/dataviz_project/us_fligths_map.html")
+map_obj.save(r"us_fligths_map.html") # we saved the figure to visualize the result
+
 
 
 
