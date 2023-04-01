@@ -93,23 +93,66 @@ plt.show()
 
 
 
+df_us_fligths.reset_index(inplace=True)
+import airportsdata
+
+airports = airportsdata.load('LID') 
+
+location = []
+missed = []
+for index, row in df_us_fligths.iterrows():
+    try:
+        location.append(airports[row['US_airport_code']])
+    except KeyError:
+        missed.append([row['US_airport_code']])
+        continue
+
+
+df_missed = pd.DataFrame(missed)
+df_missed.columns = ['US_airport_code']
+
+location2=[]
+missed=[]
+airports = airportsdata.load('IATA')
+for index, row in df_missed.iterrows():
+    try:
+        location2.append(airports[row['US_airport_code']])
+    except KeyError:
+        missed.append([row['US_airport_code']])
+        continue
+
+df_location = pd.DataFrame(location)
+df_location2 = pd.DataFrame(location2)
 
 
 
 
 
 
+df_us_fligths.columns = ['lid', 'n_fligths']
+df_location = pd.merge(df_location, df_us_fligths, on='lid', how='outer')
+df_location.dropna(subset=['icao'], inplace=True)
+
+
+df_us_fligths.columns = ['iata', 'n_fligths']
+df_location2 = pd.merge(df_location2, df_us_fligths, on='iata', how='outer')
+df_location2.dropna(subset=['icao'], inplace=True)
+
+
+df_heat_map = pd.concat([df_location, df_location2])
+
+lat_long_fligths = df_location.iloc[:, [7, 8,11]]
+import folium
+
+from folium.plugins import HeatMap
+
+map_obj = folium.Map(location = [38.27312, -98.5821872], zoom_start = 5)
 
 
 
+HeatMap(lat_long_fligths).add_to(map_obj)
 
-
-
-
-
-
-
-
+map_obj.save(r"/Users/gabrieledipalma/Documents/GitHub/dataviz_project/us_fligths_map.html")
 
 
 
