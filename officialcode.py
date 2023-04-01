@@ -70,7 +70,6 @@ plt.show()
 
 
 # Barplot with airports and number of fligths for each ariport
-
 df_us_fligths = df_airplanes[['US_airport_code','Total_Flights']].groupby(by='US_airport_code').sum()
 df_foreign_fligths = df_airplanes[['Foreign_airport_code','Total_Flights']].groupby(by='Foreign_airport_code').sum()
 
@@ -80,7 +79,6 @@ df_fligths_count.reset_index(inplace=True)
 df_fligths_count.sort_values(by='Total_Flights', ascending = False, inplace=True)
 
 top_10_airp = df_fligths_count.head(10)
-
 
 
 
