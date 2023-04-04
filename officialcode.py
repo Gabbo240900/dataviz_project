@@ -197,7 +197,33 @@ map_obj.save(r"us_fligths_map.html") # we saved the figure to visualize the resu
 
 
 
+# Convert the "Date" column to a datetime object
+df_airplanes['Date'] = pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y')
 
+# Group the data by airport and date and aggregate the total number of flights
+flights_per_airport = df_airplanes.groupby(['US_airport_code', 'Date'])['Total_Flights'].sum().reset_index()
+
+# Get the top 5 airports with the most total flights
+top_airports = flights_per_airport.groupby('US_airport_code')['Total_Flights'].sum().nlargest(5).index
+
+# Filter the data to only include the top 5 airports
+flights_per_airport_top5 = flights_per_airport[flights_per_airport['US_airport_code'].isin(top_airports)]
+
+# Pivot the data to have each airport as a separate column and the dates as the rows
+pivoted_flights = flights_per_airport_top5.pivot(index='Date', columns='US_airport_code', values='Total_Flights')
+
+# Create a line plot for each airport showing the total number of flights over time
+fig, ax = plt.subplots(figsize=(12,8))
+pivoted_flights.plot(ax=ax)
+ax.set_xlabel("Date")
+ax.set_ylabel("Total Flights")
+ax.set_title("Flights per Airport over Time")
+
+# Add a legend to show which color corresponds to each airport
+legend_labels = [f"{airport} ({i+1})" for i, airport in enumerate(top_airports)]
+ax.legend(legend_labels)
+
+plt.show()
 
 
 
