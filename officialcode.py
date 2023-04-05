@@ -237,6 +237,112 @@ plt.show()
 
 
 
+##########ci sto a prova
+
+
+
+
+
+import networkx as nx
+
+from bokeh.io import show, output_notebook
+from bokeh.models import ColumnDataSource, HoverTool
+from bokeh.plotting import figure
+from bokeh.palettes import Spectral10
+
+from bokeh.models.graphs import NodesAndLinkedEdges, EdgesAndLinkedNodes
+from bokeh.models import GlyphRenderer, Circle, MultiLine
+from bokeh.models.graphs import GraphRenderer
+
+# Let's assume that df_airplanes is a pandas dataframe with information about flights
+
+# Get the top 10 airports by total flights
+top_airports = df_airplanes.groupby('US_airport_code')['Total_Flights'].sum().nlargest(10).index
+
+# Create a new dataframe with only the top 10 airports
+df_top_airports = df_airplanes[df_airplanes['US_airport_code'].isin(top_airports)]
+
+# Group the data by date and airport and aggregate the total number of flights
+df_top_airports = df_top_airports.groupby(['Date', 'US_airport_code'])['Total_Flights'].sum().reset_index()
+
+# Create a graph object
+G = nx.Graph()
+
+# Add nodes for each airport
+for airport in top_airports:
+    G.add_node(airport)
+
+# Add edges for each combination of airports
+for i in range(len(df_top_airports)):
+    for j in range(i+1, len(df_top_airports)):
+        if df_top_airports.loc[i, 'Date'] == df_top_airports.loc[j, 'Date']:
+            airport1 = df_top_airports.loc[i, 'US_airport_code']
+            airport2 = df_top_airports.loc[j, 'US_airport_code']
+            flights = df_top_airports.loc[i, 'Total_Flights'] + df_top_airports.loc[j, 'Total_Flights']
+            if G.has_edge(airport1, airport2):
+                G[airport1][airport2]['weight'] += flights
+            else:
+                G.add_edge(airport1, airport2, weight=flights)
+
+# Convert the graph object to a pandas dataframe
+df_edges = pd.DataFrame(G.edges(data=True), columns=['from', 'to', 'weight'])
+
+# Add a column with the edge weight as a string for display purposes
+df_edges['weight_str'] = df_edges['weight'].apply(lambda x: str(x['weight']))
+
+# Convert the nodes to a pandas dataframe and add a column with the node degree (number of connections)
+df_nodes = pd.DataFrame({'id': list(G.nodes)})
+df_nodes['degree'] = df_nodes['id'].apply(lambda x: len(list(G.neighbors(x))))
+
+# Define the data sources for the plot
+node_source = ColumnDataSource(df_nodes)
+edge_source = ColumnDataSource(df_edges)
+
+# Define the plot figure
+plot = figure(title='Top 10 Airports', x_range=(-1.2, 1.2), y_range=(-1.2, 1.2), tools='pan,wheel_zoom,box_zoom,reset')
+
+
+# Create a new graph renderer
+graph_renderer = GraphRenderer()
+
+# Set the layout provider and graph layout
+graph_renderer.layout_provider = StaticLayoutProvider(graph_layout=pos)
+graph_renderer.node_renderer.data_source.add(df_nodes['id'], 'id')
+graph_renderer.node_renderer.data_source.add(df_nodes['degree'], 'degree')
+graph_renderer.edge_renderer.data_source.data = edge_source.data
+
+# Create the graph layout
+pos = nx.spring_layout(G)
+x, y = list(zip(*pos.values()))
+df_nodes['x'] = x
+df_nodes['y'] = y
+df_edges['xs'] = [[pos[start][0], pos[end][0]] for start, end in zip(df_edges['from'], df_edges['to'])]
+df_edges['ys'] = [[pos[start][1], pos[end][1]] for start, end in zip(df_edges['from'], df_edges['to'])]
+
+# Set node attributes
+circle = Circle(size=15, fill_color=Spectral10[0])
+graph_renderer.node_renderer.glyph = circle
+graph_renderer.node_renderer.data_source.data = node_source.data
+graph_renderer.node_renderer.data_source.data['size'] = df_nodes['degree']*2
+
+# Set edge attributes
+edge_attrs = {'xs': 'xs', 'ys': 'ys', 'line_width': 'weight', 'line_alpha': 0.8}
+multi_line = MultiLine(line_color=Spectral10[1], **edge_attrs)
+graph_renderer.edge_renderer.glyph = multi_line
+graph_renderer.edge_renderer.data_source.data = edge_source.data
+graph_renderer.edge_renderer.data_source.data['weight_str'] = df_edges['weight_str']
+
+# Add hover tooltips for the nodes and edges
+hover_node = HoverTool(tooltips=[('Airport', '@id'), ('Degree', '@degree')])
+hover_edge = HoverTool(tooltips=[('From', '@start'), ('To', '@end'), ('Weight', '@weight_str')])
+plot.add_tools(hover_node, hover_edge)
+
+# Add the graph renderer to the plot
+plot.renderers.append(graph_renderer)
+
+# Show the plot in a notebook
+output_notebook()
+show(plot)
 
 
 
