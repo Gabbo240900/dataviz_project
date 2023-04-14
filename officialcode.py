@@ -233,7 +233,7 @@ fig.update_traces(line=dict(width=2),
 
 # Save the figure as an interactive HTML file with zoom functionality enabled
 config = {'scrollZoom': True}
-pio.write_html(fig, file='dynamic_time_series_enhanced.html', config=config)
+pio.write_html(fig, file='dynamic_time_series.html', config=config)
 
 
 
