@@ -51,6 +51,7 @@ if df_airplanes['type'].nunique() == 1:
 #Let's drop 'type' column because it has all equal values
 df_airplanes = df_airplanes.drop('type', axis=1)
 
+# Convert 'Date' column to datetime format
 df_airplanes['Date'] = (pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y', errors='coerce'))
 
 # Create a boxplot to check for outliers
@@ -62,74 +63,71 @@ ax.set_title('Boxplot ')
 ax.set_ylabel('Total_Flights')
 
 plt.show()
-# It seems like there are few observations in which there are over than 1000 flights reaching a top number 2000 in May '96
-# These should not be removed, but more analyzed to check why there have been so many fligths in those days
+# Observations show more than 1000 flights in some days, with a maximum of 2000 in May '96.
+# These should not be removed, but further analyzed to understand why there were so many flights during those days.
 
 
 
 
 
-# Barplot with airports and number of fligths for each ariport
-df_us_fligths = df_airplanes[['US_airport_code','Total_Flights']].groupby(by='US_airport_code').sum() 
-# group by US_airport and sum the number of fligths 
-df_foreign_fligths = df_airplanes[['Foreign_airport_code','Total_Flights']].groupby(by='Foreign_airport_code').sum() 
-# group by foreign and sum the number of fligths 
+# Barplot with airports and number of flights for each airport
+df_us_flights = df_airplanes[['US_airport_code', 'Total_Flights']].groupby(by='US_airport_code').sum()
+# Group by US_airport and sum the number of flights
+df_foreign_flights = df_airplanes[['Foreign_airport_code', 'Total_Flights']].groupby(by='Foreign_airport_code').sum()
+# Group by foreign and sum the number of flights
 
-df_fligths_count  = pd.concat([df_foreign_fligths, df_us_fligths])
-# concatenate the two datasets to get a single one with all the fligths
-df_fligths_count.reset_index(inplace=True)
-# reset the index to set the airport code as a column
+df_flights_count = pd.concat([df_foreign_flights, df_us_flights])
+# Concatenate the two datasets to get a single one with all the flights
+df_flights_count.reset_index(inplace=True)
+# Reset the index to set the airport code as a column
 
-df_fligths_count.sort_values(by='Total_Flights', ascending = False, inplace=True)
-# Sort based on fligths for creating a barplot of the top 10 airports
+df_flights_count.sort_values(by='Total_Flights', ascending=False, inplace=True)
+# Sort based on flights for creating a barplot of the top 10 airports
 
-top_10_airp = df_fligths_count.head(10)
+top_10_airp = df_flights_count.head(10)
 # New dataset with only the top 10 airports
 
-
-# Barplot with seaborn 
-sns.barplot(data=top_10_airp, x="index", y="Total_Flights") 
+# Barplot with seaborn
+sns.barplot(data=top_10_airp, x="index", y="Total_Flights")
 plt.xlabel('Airport')
-plt.title('Fligths per Airport')
-plt.ticklabel_format(style = 'plain', axis = 'y')
+plt.title('Flights per Airport')
+plt.ticklabel_format(style='plain', axis='y')
 plt.show()
 
 
 
 
-# ----- Now we will start creating a heatmap of the US Fligths based on total fligths -----
-df_us_fligths.reset_index(inplace=True) #reset index
 
+# ----- Now we will start creating a heatmap of the US Flights based on total flights -----
+df_us_flights.reset_index(inplace=True)  # reset index
 
-# we retrived the coordinates by using another dataframe that links the airport identification name to the coordinates
+# We retrieved the coordinates by using another dataframe that links the airport identification name to the coordinates
 # pip install airportsdata
-import airportsdata # new library for retrieving the coordinates
+import airportsdata  # new library for retrieving the coordinates
 
 # We discovered that there are various formats for airport codes
-# we have both LID format and IATA format. 
-# In the next step we will try to catch as most airports as possible
+# We have both LID format and IATA format.
+# In the next step, we will try to catch as many airports as possible
 
+# Dictionary with all the information we need
+airports = airportsdata.load('LID')
 
-# Dictionary with all the infoprmation we need 
-airports = airportsdata.load('LID') 
+location = []  # empty list to store all the airports that have an airport code in 'LID' format
+missed = []  # list with all missed airports
 
-location = [] #empty list to store all the airports that have an ariport code in 'LID' format
-missed = [] #list with all missed airports
-
-# error managemtn for loop, to get all the location with LID format
-for index, row in df_us_fligths.iterrows():
+# Error management for loop, to get all the locations with LID format
+for index, row in df_us_flights.iterrows():
     try:
         location.append(airports[row['US_airport_code']])
     except KeyError:
-        missed.append([row['US_airport_code']]) # we checked for all the airport ids that didn't match the new dataframe
+        missed.append([row['US_airport_code']])
         continue
 
+df_missed = pd.DataFrame(missed)  # All missed airports will now be looped again to check if they have IATA format code
+df_missed.columns = ['US_airport_code']  # rename the column
 
-df_missed = pd.DataFrame(missed) # all missed airports will now be looped again to check if they have IATA format code
-df_missed.columns = ['US_airport_code'] #rename the column
-
-location2=[]#empty list to store all the airports that have an ariport code in 'LID' format
-missed=[] # new empty missed list
+location2 = []  # empty list to store all the airports that have an airport code in 'IATA' format
+missed = []  # new empty missed list
 
 # Now we try to catch all IATA format airport codes
 airports = airportsdata.load('IATA')
@@ -140,24 +138,19 @@ for index, row in df_missed.iterrows():
         missed.append([row['US_airport_code']])
         continue
 
-df_lid = pd.DataFrame(location)# Dataframe with all LID format codes
-df_iata = pd.DataFrame(location2)# Dataframe with all IATA format codes
-df_missed = pd.DataFrame(missed) # Dataframe with all missed airport codes
+df_lid = pd.DataFrame(location)  # Dataframe with all LID format codes
+df_iata = pd.DataFrame(location2)  # Dataframe with all IATA format codes
+df_missed = pd.DataFrame(missed)  # Dataframe with all missed airport codes
 
-
-
-
-# we created a new df that merges the coordinates with the airport id and the total number of flights
+# We created a new df that merges the coordinates with the airport id and the total number of flights
 # Repeated both for LID and IATA format code
-df_us_fligths.columns = ['lid', 'n_fligths']
-df_lid = pd.merge(df_lid, df_us_fligths, on='lid', how='outer')
+df_us_flights.columns = ['lid', 'n_flights']
+df_lid = pd.merge(df_lid, df_us_flights, on='lid', how='outer')
 df_lid.dropna(subset=['icao'], inplace=True)
 
-
-df_us_fligths.columns = ['iata', 'n_fligths']
-df_iata = pd.merge(df_iata, df_us_fligths, on='iata', how='outer')
+df_us_flights.columns = ['iata', 'n_flights']
+df_iata = pd.merge(df_iata, df_us_flights, on='iata', how='outer')
 df_iata.dropna(subset=['icao'], inplace=True)
-
 
 
 # # AGGIUNGI A QUELLI DI PRIMA SCRIVENDO A MANO LATITUDINE E LONGITUDINE
@@ -168,34 +161,40 @@ df_iata.dropna(subset=['icao'], inplace=True)
 
 # df_missed = pd.merge(df_missed, df_us_fligths)
 
-
-
-
 # airports['LKE']
 
 
 
+# Concatenate the 'df_lid' and 'df_iata' dataframes to create the final dataset with all caught airports
+df_heat_map = pd.concat([df_lid, df_iata])
 
+# Select the required information for the heatmap (latitude, longitude, and number of flights)
+lat_long_flights = df_heat_map.iloc[:, [7, 8, 11]]
 
-
-df_heat_map = pd.concat([df_lid, df_iata])# final dataset with all catched airports
-
-lat_long_fligths = df_heat_map.iloc[:, [7, 8,11]] # dataset with only the information we need for the heatmap
-# new library for the heatmap creation 
-
+# Import the necessary libraries for creating the heatmap
 # pip install folium
 import folium
 from folium.plugins import HeatMap
 
-map_obj = folium.Map(location = [38.27312, -98.5821872], zoom_start = 5) #where to make the map start
+# Create a folium map object centered on the United States with an initial zoom level
+map_obj = folium.Map(location=[38.27312, -98.5821872], zoom_start=5)
+
+# Add the heatmap layer to the map object using the 'lat_long_flights' dataframe
+HeatMap(lat_long_flights).add_to(map_obj)
+
+# Save the heatmap to an HTML file for visualization
+map_obj.save("us_flights_map.html")
 
 
-HeatMap(lat_long_fligths).add_to(map_obj)
-
-map_obj.save(r"us_fligths_map.html") # we saved the figure to visualize the result
 
 
 
+#####Time series#####
+
+# Import necessary libraries
+import plotly.express as px
+import plotly.io as pio
+import plotly.graph_objs as go
 
 # Convert the "Date" column to a datetime object
 df_airplanes['Date'] = pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y')
@@ -209,23 +208,32 @@ top_airports = flights_per_airport.groupby('US_airport_code')['Total_Flights'].s
 # Filter the data to only include the top 5 airports
 flights_per_airport_top5 = flights_per_airport[flights_per_airport['US_airport_code'].isin(top_airports)]
 
-# Pivot the data to have each airport as a separate column and the dates as the rows
-pivoted_flights = flights_per_airport_top5.pivot(index='Date', columns='US_airport_code', values='Total_Flights')
 
-# Create a line plot for each airport showing the total number of flights over time
-fig, ax = plt.subplots(figsize=(12,8))
-pivoted_flights.plot(ax=ax)
-ax.set_xlabel("Date")
-ax.set_ylabel("Total Flights")
-ax.set_title("Flights per Airport over Time")
+# Create a dynamic line plot for each airport showing the total number of flights over time
+fig = go.Figure()
 
-# Add a legend to show which color corresponds to each airport
-legend_labels = [f"{airport} ({i+1})" for i, airport in enumerate(top_airports)]
-ax.legend(legend_labels)
+# Add a line trace for each airport
+for airport in top_airports:
+    fig.add_trace(go.Scatter(x=flights_per_airport_top5[flights_per_airport_top5['US_airport_code'] == airport]['Date'],
+                             y=flights_per_airport_top5[flights_per_airport_top5['US_airport_code'] == airport]['Total_Flights'],
+                             name=airport,
+                             mode='lines'))
 
-plt.show()
+# Customize the layout
+fig.update_layout(title='Flights per Airport over Time',
+                  xaxis_title='Date',
+                  yaxis_title='Total Flights',
+                  legend_title_text='Airport',
+                  plot_bgcolor='rgba(245, 245, 245, 1)',
+                  hovermode='x unified')
 
+# Customize the line style and markers
+fig.update_traces(line=dict(width=2),
+                 marker=dict(size=6, symbol='circle', line=dict(width=1, color='black')))
 
+# Save the figure as an interactive HTML file with zoom functionality enabled
+config = {'scrollZoom': True}
+pio.write_html(fig, file='dynamic_time_series_enhanced.html', config=config)
 
 
 
