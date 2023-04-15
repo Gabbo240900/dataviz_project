@@ -189,12 +189,16 @@ map_obj.save("us_flights_map.html")
 
 
 
-#####Time series#####
+######################### Time series #######################
 
-# Import main libraries
-import plotly.express as px
-import plotly.io as pio
 import plotly.graph_objs as go
+import plotly.io as pio
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output
+from jupyter_dash import JupyterDash
+
 
 # Convert the "Date" column to a datetime object
 df_airplanes['Date'] = pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y')
@@ -202,46 +206,101 @@ df_airplanes['Date'] = pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y')
 # Group the data by airport and date and aggregate the total number of flights
 flights_per_airport = df_airplanes.groupby(['US_airport_code', 'Date'])['Total_Flights'].sum().reset_index()
 
-# Get the top 5 airports with the most total flights
-top_airports = flights_per_airport.groupby('US_airport_code')['Total_Flights'].sum().nlargest(5).index
+# Reindex the data to include missing months with 0 flights
+flights_per_airport = flights_per_airport.set_index(['US_airport_code', 'Date']).unstack(level=-1, fill_value=0).stack().reset_index()
 
-# Filter the data to only include the top 5 airports
-flights_per_airport_top5 = flights_per_airport[flights_per_airport['US_airport_code'].isin(top_airports)]
+# Get all unique airport codes
+all_airports = flights_per_airport['US_airport_code'].unique().tolist()
 
+# Create airport selection options
+airport_options = [{"label": airport, "value": airport} for airport in all_airports]
 
-# Create a dynamic line plot for each airport showing the total number of flights over time
-fig = go.Figure()
+# Find the top 5 airports with the highest total flights
+top_airports = flights_per_airport.groupby('US_airport_code')['Total_Flights'].sum().nlargest(5).index.tolist()
 
-# Add a line trace for each airport
-for airport in top_airports:
-    fig.add_trace(go.Scatter(x=flights_per_airport_top5[flights_per_airport_top5['US_airport_code'] == airport]['Date'],
-                             y=flights_per_airport_top5[flights_per_airport_top5['US_airport_code'] == airport]['Total_Flights'],
-                             name=airport,
-                             mode='lines'))
+# Get all unique years from the dataset
+all_years = sorted(flights_per_airport['Date'].dt.year.unique().tolist())
 
-# Customize the layout
-fig.update_layout(title='Flights per Airport over Time',
-                  xaxis_title='Date',
-                  yaxis_title='Total Flights',
-                  legend_title_text='Airport',
-                  plot_bgcolor='rgba(245, 245, 245, 1)',
-                  hovermode='x unified')
+# Create year selection options
+year_options = [{"label": year, "value": year} for year in all_years]
+year_options.insert(0, {"label": "All Years", "value": "all"})
 
-# Customize the line style and markers
-fig.update_traces(line=dict(width=2),
-                 marker=dict(size=6, symbol='circle', line=dict(width=1, color='black')))
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-# Save the figure as an interactive HTML file with zoom functionality enabled
-config = {'scrollZoom': True}
-pio.write_html(fig, file='dynamic_time_series.html', config=config)
+app = JupyterDash(__name__, external_stylesheets=external_stylesheets)
 
+# App layout
+app.layout = html.Div([
+    html.Div([
+        html.P("Select Airports:", className="control_label"),
+        dcc.Dropdown(
+            id="airport_selector",
+            options=airport_options,
+            multi=True,
+            value=top_airports,  # Preselect the top 5 airports with the highest total flights
+            className="dcc_control",
+        ),
+        html.P("Select Year:", className="control_label"),
+        dcc.Dropdown(
+            id="year_selector",
+            options=year_options,
+            value="all",  # Preselect the "All Years" option
+            className="dcc_control",
+        )
+    ],
+    className="pretty_container two columns",
+    id="cross-filter-options",
+    ),
+    html.Div(
+        [dcc.Graph(id="time_series_graph")],
+        className="pretty_container ten columns",
+        style={"height": "90vh"}  # Set the height of the right container to 90% of the viewport height
+    ),
+])
 
+@app.callback(
+    Output("time_series_graph", "figure"),
+    [Input("airport_selector", "value"), Input("year_selector", "value")]
+)
+def update_time_series(selected_airports, selected_year):
+    fig = go.Figure()
 
+    filtered_data = flights_per_airport[flights_per_airport['US_airport_code'].isin(selected_airports)]
 
+    # Filter data by the selected year, if applicable
+    if selected_year != "all":
+        filtered_data = filtered_data[filtered_data['Date'].dt.year == selected_year]
 
+    for airport in selected_airports:
+        fig.add_trace(go.Scatter(
+            x=filtered_data[filtered_data['US_airport_code'] == airport]['Date'],
+            y=filtered_data[filtered_data['US_airport_code'] == airport]['Total_Flights'],
+            name=airport,
+            mode='lines'
+        ))
 
+    fig.update_layout(
+        title='Flights per Airport over Time',
+        xaxis_title='Date',
+        yaxis_title='Total Flights',
+        legend_title_text='Airport',
+        plot_bgcolor='rgba(245, 245, 245, 1)',
+        hovermode='x unified',
+        uirevision='same',  # Preserve the user's zoom level when updating the graph
+        yaxis=dict(range=[0, None]),  # Set the minimum value of the y-axis to 0
+        autosize=True,  # Enable autosize to make the graph responsive
+        margin=dict(l=50, r=50, b=50, t=50, pad=4),
+        height=800,  # Set a fixed height for the plot in pixels
+    )
 
+    fig.update_traces(
+        line=dict(width=2),
+        marker=dict(size=6, symbol='circle', line=dict(width=1, color='black'))
+    )
 
+    return fig
+
+app.run_server(mode='external')
 
 
 
