@@ -99,6 +99,7 @@ plt.show()
 
 
 # ----- Now we will start creating a heatmap of the US Flights based on total flights -----
+
 df_us_flights.reset_index(inplace=True)  # reset index
 
 # We retrieved the coordinates by using another dataframe that links the airport identification name to the coordinates
@@ -153,8 +154,6 @@ df_iata = pd.merge(df_iata, df_us_flights, on='iata', how='outer')
 df_iata.dropna(subset=['icao'], inplace=True)
 
 
-# # AGGIUNGI A QUELLI DI PRIMA SCRIVENDO A MANO LATITUDINE E LONGITUDINE
-
 
 # df_us_fligths.columns = ['US_airport_code', 'n_fligths']
 # df_missed.columns = ['US_airport_code']
@@ -193,7 +192,7 @@ map_obj.save("us_flights_map.html")
 
 import plotly.graph_objs as go
 import plotly.io as pio
-import dash
+# import dashpip
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
@@ -301,6 +300,62 @@ def update_time_series(selected_airports, selected_year):
     return fig
 
 app.run_server(mode='external')
+
+
+##### ------ Network analysis ---------- ########
+import networkx as nx
+
+top_10_airport = top_10_airp['index'].values.tolist()
+df_network_us = df_airplanes.loc[df_airplanes['US_airport_code'].isin(top_10_airport)]
+df_network_for = df_airplanes.loc[df_airplanes['Foreign_airport_code'].isin(top_10_airport)]
+df_network = pd.concat([df_network_us, df_network_for])
+
+
+G = nx.from_pandas_edgelist(df_network, source='US_airport_code', target='Foreign_airport_code',
+                            edge_attr='Total_Flights')
+
+
+
+G.nodes()
+G.edges()
+print('Nodes: ', G.number_of_nodes(), 'Edges: ', G.number_of_edges())
+#print both the number of nodes and edges
+
+
+import matplotlib.pyplot as plt
+
+
+pos = nx.kamada_kawai_layout(G)
+plt.figure(figsize=(20,20), dpi=300) #set picture resolution
+
+node_sizes = [len(list(G.neighbors(n))) * 100 for n in G.nodes()] #size the nodes based on their degree
+nx.draw_networkx_nodes(G, pos, node_size=node_sizes)
+
+# edges
+nx.draw_networkx_edges(G, pos,width=1, alpha = 0.5)
+
+nx.draw_networkx_labels(G, pos, font_size=20, alpha = 0.8)
+
+
+plt.tight_layout()
+plt.axis("off")
+plt.title('Airports', fontsize=30)
+
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
