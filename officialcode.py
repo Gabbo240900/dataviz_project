@@ -323,11 +323,6 @@ app.run_server(mode='external',port=8051)
 ##### ------ Network analysis ---------- ########
 
 
-
-
-
-
-
 import pandas as pd
 import networkx as nx
 import plotly.graph_objects as go
@@ -354,20 +349,34 @@ pos = nx.circular_layout(G)
 degree = dict(G.degree)
 node_sizes = [degree[node] * 3 for node in G.nodes]
 
-# Create the edge trace
-edge_trace = go.Scatter(
-    x=[],
-    y=[],
-    line=dict(color='black', width=0.5),
-    hoverinfo='none',
-    mode='lines',
-)
+# Function to map edge weights to colors
+def weight_to_color(weight):
+    if weight <= 400:
+        return 'black', 0.25
+    elif weight <= 700:
+        return 'green', 1.5
+    else:
+        return 'red', 1.5
 
-for edge in G.edges():
+# Create the edge traces
+edge_traces = []
+
+for edge in G.edges(data=True):
     x0, y0 = pos[edge[0]]
     x1, y1 = pos[edge[1]]
-    edge_trace['x'] += tuple([x0, x1, None])
-    edge_trace['y'] += tuple([y0, y1, None])
+    weight = edge[2]['weight']
+    color, width = weight_to_color(weight)
+
+    edge_trace = go.Scatter(
+        x=[x0, x1, None],
+        y=[y0, y1, None],
+        line=dict(color=color, width=width),
+        hoverinfo='none',
+        mode='lines',
+        showlegend=False,
+    )
+
+    edge_traces.append(edge_trace)
 
 # Create the node trace
 node_trace = go.Scatter(
@@ -377,12 +386,13 @@ node_trace = go.Scatter(
     mode='markers+text',
     hoverinfo='text',
     marker=dict(
-        color='blue',  # Set a single color for all nodes
+        color='#1D92ED',
         size=node_sizes,
-        line=dict(width=2),
+        line=dict(width=2,color='#6EC1E4'),
     ),
     textposition='middle center',
-    textfont=dict(size=8, color='white'),
+    textfont=dict(size=8, color='white', family="Arial"),
+    showlegend=False
 )
 
 for node in G.nodes():
@@ -391,10 +401,42 @@ for node in G.nodes():
     node_trace['y'] += tuple([y])
     node_trace['text'] += tuple([node])
 
+# Create the legend traces
+legend_trace_1 = go.Scatter(
+    x=[None],
+    y=[None],
+    mode='markers',
+    marker=dict(color='black', size=10),
+    legendgroup="edge_colors",
+    showlegend=True,
+    name="Weight <= 400",
+)
+
+legend_trace_2 = go.Scatter(
+    x=[None],
+    y=[None],
+    mode='markers',
+    marker=dict(color='green', size=10),
+    legendgroup="edge_colors",
+    showlegend=True,
+    name="Weight <= 700",
+)
+
+legend_trace_3 = go.Scatter(
+    x=[None],
+    y=[None],
+    mode='markers',
+    marker=dict(color='red', size=10),
+    legendgroup="edge_colors",
+    showlegend=True,
+    name="Weight > 700",
+)
+
 # Create the layout
 layout = go.Layout(
-    title=dict(text="Top 30 Airports by Total Flights", x=0.5, y=0.9, font=dict(size=20)),
-    showlegend=False,
+    title=dict(text="Top 30 Airports by Total Flights", x=0.5, y=0.92, font=dict(size=21)),
+    showlegend=True,
+    legend=dict(title=dict(text="Legend")),
     hovermode='closest',
     margin=dict(b=20, l=5, r=5, t=40),
     xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
@@ -402,7 +444,7 @@ layout = go.Layout(
 )
 
 # Create the figure
-fig = go.Figure(data=[edge_trace, node_trace], layout=layout)
+fig = go.Figure(data=edge_traces + [node_trace, legend_trace_1, legend_trace_2, legend_trace_3], layout=layout)
 
 # Show the plot
 fig.show()
