@@ -1,9 +1,16 @@
-# Let's import the main libraries!
+# Let's import the required libraries!
 import pandas as pd
 import numpy as np
 import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+import plotly.express as px
+import dash
+import dash_bootstrap_components as dbc
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output
 
 # Let's read the dataset and print an initial overview
 df_airplanes = pd.read_csv('International_Report_Departures.csv')
@@ -54,46 +61,56 @@ df_airplanes = df_airplanes.drop('type', axis=1)
 # Convert 'Date' column to datetime format
 df_airplanes['Date'] = (pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y', errors='coerce'))
 
-# Create a boxplot to check for outliers
-fig, ax = plt.subplots()
-ax.boxplot(df_airplanes['Total_Flights'])
 
-# Add labels and title
-ax.set_title('Boxplot ')
-ax.set_ylabel('Total_Flights')
-
-plt.show()
-# Observations show more than 1000 flights in some days, with a maximum of 2000 in May '96.
-# These should not be removed, but further analyzed to understand why there were so many flights during those days.
-
-
-
-
-
-# Barplot with airports and number of flights for each airport
+# Prepare data for barplot
 df_us_flights = df_airplanes[['US_airport_code', 'Total_Flights']].groupby(by='US_airport_code').sum()
-# Group by US_airport and sum the number of flights
 df_foreign_flights = df_airplanes[['Foreign_airport_code', 'Total_Flights']].groupby(by='Foreign_airport_code').sum()
-# Group by foreign and sum the number of flights
-
 df_flights_count = pd.concat([df_foreign_flights, df_us_flights])
-# Concatenate the two datasets to get a single one with all the flights
 df_flights_count.reset_index(inplace=True)
-# Reset the index to set the airport code as a column
-
 df_flights_count.sort_values(by='Total_Flights', ascending=False, inplace=True)
-# Sort based on flights for creating a barplot of the top 10 airports
 
-top_10_airp = df_flights_count.head(10)
-# New dataset with only the top 10 airports
+# Create the Dash app
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-# Barplot with seaborn
-sns.barplot(data=top_10_airp, x="index", y="Total_Flights")
-plt.xlabel('Airport')
-plt.title('Flights per Airport')
-plt.ticklabel_format(style='plain', axis='y')
-plt.show()
+# Define the app layout
+app.layout = html.Div([
+    html.H1("Airports Data Visualization"),
+    dcc.Dropdown(
+        id="airport-dropdown",
+        options=[{"label": i, "value": i} for i in sorted(df_flights_count['index'].unique())],
+        value=df_flights_count['index'].head(10).tolist(),  # Default value is the top 10 airports
+        multi=True
+    ),
+    dbc.Row([
+        dbc.Col(dcc.Graph(id="boxplot"), width=6),
+        dbc.Col(dcc.Graph(id="barplot"), width=6)
+    ])
+])
 
+# Define callback for updating figures based on selected airports
+@app.callback(
+    [Output("boxplot", "figure"), Output("barplot", "figure")],
+    [Input("airport-dropdown", "value")]
+)
+def update_figures(selected_airports):
+    filtered_df = df_airplanes[df_airplanes["US_airport_code"].isin(selected_airports) | df_airplanes["Foreign_airport_code"].isin(selected_airports)]
+
+    boxplot_figure = px.box(filtered_df, x="Total_Flights", title="Boxplot of Total Flights")
+    barplot_figure = px.bar(
+        df_flights_count[df_flights_count['index'].isin(selected_airports)],
+        x='index',
+        y='Total_Flights',
+        title='Flights per Airport',
+        labels={"index": "Airports"},  # Change x-axis title
+        color='index',  # Use different colors for each airport
+        color_discrete_sequence=px.colors.qualitative.Set2  # Choose a color palette
+    )
+
+    return boxplot_figure, barplot_figure
+
+if __name__ == "__main__":
+    app.run_server(debug=False, use_reloader=False)
+# open 127.0.0.1:8051 to visualize the amazing plots!!
 
 
 
@@ -299,63 +316,94 @@ def update_time_series(selected_airports, selected_year):
 
     return fig
 
-app.run_server(mode='external')
+app.run_server(mode='external',port=8051)
+# open 127.0.0.1:8051 to visualize the TIME SERIES!
 
 
 ##### ------ Network analysis ---------- ########
+
+
+
+
+
+
+
+import pandas as pd
 import networkx as nx
+import plotly.graph_objects as go
 
-top_10_airport = top_10_airp['index'].values.tolist()
-df_network_us = df_airplanes.loc[df_airplanes['US_airport_code'].isin(top_10_airport)]
-df_network_for = df_airplanes.loc[df_airplanes['Foreign_airport_code'].isin(top_10_airport)]
-df_network = pd.concat([df_network_us, df_network_for])
+# Get the top 30 airports for total flights
+top_30_airports = df_flights_count.head(30)
 
+# Create a subset of the original DataFrame containing only the top 30 airports
+mask_us = df_airplanes['US_airport_code'].isin(top_30_airports['index'])
+mask_foreign = df_airplanes['Foreign_airport_code'].isin(top_30_airports['index'])
+subset_airplanes = df_airplanes[mask_us & mask_foreign]
 
-G = nx.from_pandas_edgelist(df_network, source='US_airport_code', target='Foreign_airport_code',
-                            edge_attr='Total_Flights')
+# Create an empty graph
+G = nx.Graph()
 
+# Add edges between airports based on the subset DataFrame
+for _, row in subset_airplanes.iterrows():
+    G.add_edge(row['US_airport_code'], row['Foreign_airport_code'], weight=row['Total_Flights'])
 
+# Define the layout for the nodes
+pos = nx.circular_layout(G)
 
-G.nodes()
-G.edges()
-print('Nodes: ', G.number_of_nodes(), 'Edges: ', G.number_of_edges())
-#print both the number of nodes and edges
+# Calculate the node sizes based on the degree of the node
+degree = dict(G.degree)
+node_sizes = [degree[node] * 3 for node in G.nodes]
 
+# Create the edge trace
+edge_trace = go.Scatter(
+    x=[],
+    y=[],
+    line=dict(color='black', width=0.5),
+    hoverinfo='none',
+    mode='lines',
+)
 
-import matplotlib.pyplot as plt
+for edge in G.edges():
+    x0, y0 = pos[edge[0]]
+    x1, y1 = pos[edge[1]]
+    edge_trace['x'] += tuple([x0, x1, None])
+    edge_trace['y'] += tuple([y0, y1, None])
 
+# Create the node trace
+node_trace = go.Scatter(
+    x=[],
+    y=[],
+    text=[],
+    mode='markers+text',
+    hoverinfo='text',
+    marker=dict(
+        color='blue',  # Set a single color for all nodes
+        size=node_sizes,
+        line=dict(width=2),
+    ),
+    textposition='middle center',
+    textfont=dict(size=8, color='white'),
+)
 
-pos = nx.kamada_kawai_layout(G)
-plt.figure(figsize=(20,20), dpi=300) #set picture resolution
+for node in G.nodes():
+    x, y = pos[node]
+    node_trace['x'] += tuple([x])
+    node_trace['y'] += tuple([y])
+    node_trace['text'] += tuple([node])
 
-node_sizes = [len(list(G.neighbors(n))) * 100 for n in G.nodes()] #size the nodes based on their degree
-nx.draw_networkx_nodes(G, pos, node_size=node_sizes)
+# Create the layout
+layout = go.Layout(
+    title=dict(text="Top 30 Airports by Total Flights", x=0.5, y=0.9, font=dict(size=20)),
+    showlegend=False,
+    hovermode='closest',
+    margin=dict(b=20, l=5, r=5, t=40),
+    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+)
 
-# edges
-nx.draw_networkx_edges(G, pos,width=1, alpha = 0.5)
+# Create the figure
+fig = go.Figure(data=[edge_trace, node_trace], layout=layout)
 
-nx.draw_networkx_labels(G, pos, font_size=20, alpha = 0.8)
-
-
-plt.tight_layout()
-plt.axis("off")
-plt.title('Airports', fontsize=30)
-
-plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Show the plot
+fig.show()
+fig.write_html('output_graph.html', auto_open=True)
