@@ -1,16 +1,13 @@
 # Let's import the required libraries!
 import pandas as pd
-import numpy as np
-import datetime
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 import plotly.express as px
 import dash
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+import webbrowser
+import os
 
 # Let's read the dataset and print an initial overview
 df_airplanes = pd.read_csv('International_Report_Departures.csv')
@@ -60,7 +57,6 @@ df_airplanes = df_airplanes.drop('type', axis=1)
 
 # Convert 'Date' column to datetime format
 df_airplanes['Date'] = (pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y', errors='coerce'))
-
 
 # Prepare data for barplot
 df_us_flights = df_airplanes[['US_airport_code', 'Total_Flights']].groupby(by='US_airport_code').sum()
@@ -201,15 +197,15 @@ HeatMap(lat_long_flights).add_to(map_obj)
 # Save the heatmap to an HTML file for visualization
 map_obj.save("us_flights_map.html")
 
-
+file_path = "us_flights_map.html"
+if os.path.exists(file_path):
+    webbrowser.open(file_path)
 
 
 
 ######################### Time series #######################
 
 import plotly.graph_objs as go
-import plotly.io as pio
-# import dashpip
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
@@ -322,10 +318,8 @@ app.run_server(mode='external',port=8051)
 
 ##### ------ Network analysis ---------- ########
 
-
 import pandas as pd
 import networkx as nx
-import plotly.graph_objects as go
 
 # Get the top 15 airports for total flights
 top_15_airports = df_flights_count.head(15)
@@ -446,6 +440,6 @@ layout = go.Layout(
 # Create the figure
 fig = go.Figure(data=edge_traces + [node_trace, legend_trace_1, legend_trace_2, legend_trace_3], layout=layout)
 
-# Show the plot
+# Show the plot!
 fig.show()
 fig.write_html('output_graph.html', auto_open=True)
