@@ -112,8 +112,11 @@ if __name__ == "__main__":
 
 
 # ----- Now we will start creating a heatmap of the US Flights based on total flights -----
-
 df_us_flights.reset_index(inplace=True)  # reset index
+df_us_flights.columns = ['ariport_code', 'count']
+df_foreign_flights.reset_index(inplace=True)
+df_foreign_flights.columns = ['ariport_code', 'count']
+df_flights_all = pd.concat([df_us_flights, df_foreign_flights])
 
 # We retrieved the coordinates by using another dataframe that links the airport identification name to the coordinates
 # pip install airportsdata
@@ -130,15 +133,15 @@ location = []  # empty list to store all the airports that have an airport code 
 missed = []  # list with all missed airports
 
 # Error management for loop, to get all the locations with LID format
-for index, row in df_us_flights.iterrows():
+for index, row in df_flights_all.iterrows():
     try:
-        location.append(airports[row['US_airport_code']])
+        location.append(airports[row['ariport_code']])
     except KeyError:
-        missed.append([row['US_airport_code']])
+        missed.append([row['ariport_code']])
         continue
 
 df_missed = pd.DataFrame(missed)  # All missed airports will now be looped again to check if they have IATA format code
-df_missed.columns = ['US_airport_code']  # rename the column
+df_missed.columns = ['ariport_code']  # rename the column
 
 location2 = []  # empty list to store all the airports that have an airport code in 'IATA' format
 missed = []  # new empty missed list
@@ -147,9 +150,9 @@ missed = []  # new empty missed list
 airports = airportsdata.load('IATA')
 for index, row in df_missed.iterrows():
     try:
-        location2.append(airports[row['US_airport_code']])
+        location2.append(airports[row['ariport_code']])
     except KeyError:
-        missed.append([row['US_airport_code']])
+        missed.append([row['ariport_code']])
         continue
 
 df_lid = pd.DataFrame(location)  # Dataframe with all LID format codes
@@ -158,12 +161,12 @@ df_missed = pd.DataFrame(missed)  # Dataframe with all missed airport codes
 
 # We created a new df that merges the coordinates with the airport id and the total number of flights
 # Repeated both for LID and IATA format code
-df_us_flights.columns = ['lid', 'n_flights']
-df_lid = pd.merge(df_lid, df_us_flights, on='lid', how='outer')
+df_flights_all.columns = ['lid', 'n_flights']
+df_lid = pd.merge(df_lid, df_flights_all, on='lid', how='outer')
 df_lid.dropna(subset=['icao'], inplace=True)
 
-df_us_flights.columns = ['iata', 'n_flights']
-df_iata = pd.merge(df_iata, df_us_flights, on='iata', how='outer')
+df_flights_all.columns = ['iata', 'n_flights']
+df_iata = pd.merge(df_iata, df_flights_all, on='iata', how='outer')
 df_iata.dropna(subset=['icao'], inplace=True)
 
 
