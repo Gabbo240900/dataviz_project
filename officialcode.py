@@ -327,12 +327,12 @@ import pandas as pd
 import networkx as nx
 import plotly.graph_objects as go
 
-# Get the top 30 airports for total flights
-top_30_airports = df_flights_count.head(30)
+# Get the top 15 airports for total flights
+top_15_airports = df_flights_count.head(15)
 
-# Create a subset of the original DataFrame containing only the top 30 airports
-mask_us = df_airplanes['US_airport_code'].isin(top_30_airports['index'])
-mask_foreign = df_airplanes['Foreign_airport_code'].isin(top_30_airports['index'])
+# Create a subset of the original DataFrame containing only the top 15 airports
+mask_us = df_airplanes['US_airport_code'].isin(top_15_airports['index'])
+mask_foreign = df_airplanes['Foreign_airport_code'].isin(top_15_airports['index'])
 subset_airplanes = df_airplanes[mask_us & mask_foreign]
 
 # Create an empty graph
@@ -347,7 +347,7 @@ pos = nx.circular_layout(G)
 
 # Calculate the node sizes based on the degree of the node
 degree = dict(G.degree)
-node_sizes = [degree[node] * 3 for node in G.nodes]
+node_sizes = [degree[node] * 7 for node in G.nodes]
 
 # Function to map edge weights to colors
 def weight_to_color(weight):
@@ -434,7 +434,7 @@ legend_trace_3 = go.Scatter(
 
 # Create the layout
 layout = go.Layout(
-    title=dict(text="Top 30 Airports by Total Flights", x=0.5, y=0.92, font=dict(size=21)),
+    title=dict(text="Top 15 Airports by Total Flights", x=0.5, y=0.93, font=dict(size=21)),
     showlegend=True,
     legend=dict(title=dict(text="Legend")),
     hovermode='closest',
