@@ -6,8 +6,6 @@ import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
-import webbrowser
-import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -68,15 +66,34 @@ df_flights_count.reset_index(inplace=True)
 df_flights_count.sort_values(by='Total_Flights', ascending=False, inplace=True)
 
 
+# Get the top 10 airport codes with the highest number of flights
 top_10 = df_flights_count.head(10)
-sns.barplot(top_10, x='index', y='Total_Flights')
-plt.ticklabel_format(style = 'plain', axis = 'y')
+
+# Set the size of the figure for the bar plot
+plt.figure(figsize=(12, 6))
+
+# Create a bar plot of the top 10 airport codes with the highest number of flights
+sns.barplot(data=top_10, x='index', y='Total_Flights')
+plt.ticklabel_format(style='plain', axis='y')
 plt.ylabel('Flights')
-plt.title('Top 10 Flights')
+plt.xlabel('Top 10 Airports')
+plt.title('Top 10 Airports in Flights')
+
+# Display the bar plot
 plt.show()
 
+# Set the size of the figure for the box plot
+plt.figure(figsize=(12, 6))
 
+# Create a box plot of the 'Total_Flights' column
+sns.boxplot(x='Total_Flights', data=df_airplanes)
 
+# Set the title and labels for the box plot
+plt.title('Box Plot of Total Flights')
+plt.xlabel('Total Flights')
+
+# Display the box plot
+plt.show()
 
 
 
@@ -160,7 +177,6 @@ HeatMap(lat_long_flights).add_to(map_obj)
 # Save the heatmap to an HTML file for visualization
 map_obj.save("us_flights_map.html")
 
-file_path = "us_flights_map.html"
 
 
 
@@ -168,11 +184,6 @@ file_path = "us_flights_map.html"
 ######################### Time series #######################
 
 import plotly.graph_objs as go
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Input, Output
-from jupyter_dash import JupyterDash
-
 
 # Convert the "Date" column to a datetime object
 df_airplanes['Date'] = pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y')
@@ -335,17 +346,11 @@ fig.write_html('output_graph.html')
 
 
 
+### LET'S CREATE THE APP !!! ###
 
-
-
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Input, Output
-import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-import dash_bootstrap_components as dbc
+
 
 
 # Define the external stylesheet
