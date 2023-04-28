@@ -8,6 +8,8 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 import webbrowser
 import os
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # Let's read the dataset and print an initial overview
 df_airplanes = pd.read_csv('International_Report_Departures.csv')
@@ -65,48 +67,16 @@ df_flights_count = pd.concat([df_foreign_flights, df_us_flights])
 df_flights_count.reset_index(inplace=True)
 df_flights_count.sort_values(by='Total_Flights', ascending=False, inplace=True)
 
-# Create the Dash app
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-# Define the app layout
-app.layout = html.Div([
-    html.H1("Airports Data Visualization"),
-    dcc.Dropdown(
-        id="airport-dropdown",
-        options=[{"label": i, "value": i} for i in sorted(df_flights_count['index'].unique())],
-        value=df_flights_count['index'].head(10).tolist(),  # Default value is the top 10 airports
-        multi=True
-    ),
-    dbc.Row([
-        dbc.Col(dcc.Graph(id="boxplot"), width=6),
-        dbc.Col(dcc.Graph(id="barplot"), width=6)
-    ])
-])
+top_10 = df_flights_count.head(10)
+sns.barplot(top_10, x='index', y='Total_Flights')
+plt.ticklabel_format(style = 'plain', axis = 'y')
+plt.ylabel('Flights')
+plt.title('Top 10 Flights')
+plt.show()
 
-# Define callback for updating figures based on selected airports
-@app.callback(
-    [Output("boxplot", "figure"), Output("barplot", "figure")],
-    [Input("airport-dropdown", "value")]
-)
-def update_figures(selected_airports):
-    filtered_df = df_airplanes[df_airplanes["US_airport_code"].isin(selected_airports) | df_airplanes["Foreign_airport_code"].isin(selected_airports)]
 
-    boxplot_figure = px.box(filtered_df, x="Total_Flights", title="Boxplot of Total Flights")
-    barplot_figure = px.bar(
-        df_flights_count[df_flights_count['index'].isin(selected_airports)],
-        x='index',
-        y='Total_Flights',
-        title='Flights per Airport',
-        labels={"index": "Airports"},  # Change x-axis title
-        color='index',  # Use different colors for each airport
-        color_discrete_sequence=px.colors.qualitative.Set2  # Choose a color palette
-    )
 
-    return boxplot_figure, barplot_figure
-
-if __name__ == "__main__":
-    app.run_server(debug=False, use_reloader=False)
-# open 127.0.0.1:8051 to visualize the amazing plots!!
 
 
 
@@ -170,16 +140,6 @@ df_iata = pd.merge(df_iata, df_flights_all, on='iata', how='outer')
 df_iata.dropna(subset=['icao'], inplace=True)
 
 
-
-# df_us_fligths.columns = ['US_airport_code', 'n_fligths']
-# df_missed.columns = ['US_airport_code']
-
-# df_missed = pd.merge(df_missed, df_us_fligths)
-
-# airports['LKE']
-
-
-
 # Concatenate the 'df_lid' and 'df_iata' dataframes to create the final dataset with all caught airports
 df_heat_map = pd.concat([df_lid, df_iata])
 
@@ -201,8 +161,7 @@ HeatMap(lat_long_flights).add_to(map_obj)
 map_obj.save("us_flights_map.html")
 
 file_path = "us_flights_map.html"
-if os.path.exists(file_path):
-    webbrowser.open(file_path)
+
 
 
 
@@ -240,83 +199,7 @@ all_years = sorted(flights_per_airport['Date'].dt.year.unique().tolist())
 year_options = [{"label": year, "value": year} for year in all_years]
 year_options.insert(0, {"label": "All Years", "value": "all"})
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = JupyterDash(__name__, external_stylesheets=external_stylesheets)
-
-# App layout
-app.layout = html.Div([
-    html.Div([
-        html.P("Select Airports:", className="control_label"),
-        dcc.Dropdown(
-            id="airport_selector",
-            options=airport_options,
-            multi=True,
-            value=top_airports,  # Preselect the top 5 airports with the highest total flights
-            className="dcc_control",
-        ),
-        html.P("Select Year:", className="control_label"),
-        dcc.Dropdown(
-            id="year_selector",
-            options=year_options,
-            value="all",  # Preselect the "All Years" option
-            className="dcc_control",
-        )
-    ],
-    className="pretty_container two columns",
-    id="cross-filter-options",
-    ),
-    html.Div(
-        [dcc.Graph(id="time_series_graph")],
-        className="pretty_container ten columns",
-        style={"height": "90vh"}  # Set the height of the right container to 90% of the viewport height
-    ),
-])
-
-@app.callback(
-    Output("time_series_graph", "figure"),
-    [Input("airport_selector", "value"), Input("year_selector", "value")]
-)
-def update_time_series(selected_airports, selected_year):
-    fig = go.Figure()
-
-    filtered_data = flights_per_airport[flights_per_airport['US_airport_code'].isin(selected_airports)]
-
-    # Filter data by the selected year, if applicable
-    if selected_year != "all":
-        filtered_data = filtered_data[filtered_data['Date'].dt.year == selected_year]
-
-    for airport in selected_airports:
-        fig.add_trace(go.Scatter(
-            x=filtered_data[filtered_data['US_airport_code'] == airport]['Date'],
-            y=filtered_data[filtered_data['US_airport_code'] == airport]['Total_Flights'],
-            name=airport,
-            mode='lines'
-        ))
-
-    fig.update_layout(
-        title='Flights per Airport over Time',
-        xaxis_title='Date',
-        yaxis_title='Total Flights',
-        legend_title_text='Airport',
-        plot_bgcolor='rgba(245, 245, 245, 1)',
-        hovermode='x unified',
-        uirevision='same',  # Preserve the user's zoom level when updating the graph
-        yaxis=dict(range=[0, None]),  # Set the minimum value of the y-axis to 0
-        autosize=True,  # Enable autosize to make the graph responsive
-        margin=dict(l=50, r=50, b=50, t=50, pad=4),
-        height=800,  # Set a fixed height for the plot in pixels
-    )
-
-    fig.update_traces(
-        line=dict(width=2),
-        marker=dict(size=6, symbol='circle', line=dict(width=1, color='black'))
-    )
-
-    return fig
-
-app.run_server(mode='external',port=8051)
-# open 127.0.0.1:8051 to visualize the TIME SERIES!
 
 
 ##### ------ Network analysis ---------- ########
@@ -444,5 +327,174 @@ layout = go.Layout(
 fig = go.Figure(data=edge_traces + [node_trace, legend_trace_1, legend_trace_2, legend_trace_3], layout=layout)
 
 # Show the plot!
-fig.show()
-fig.write_html('output_graph.html', auto_open=True)
+fig.write_html('output_graph.html')
+
+
+
+
+
+
+
+
+
+
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output
+import plotly.express as px
+import plotly.graph_objects as go
+import pandas as pd
+import dash_bootstrap_components as dbc
+
+
+# Define the external stylesheet
+external_stylesheets = [dbc.themes.BOOTSTRAP]
+
+# Define the app
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+
+# Define the layout
+app.layout = html.Div([
+    
+    # First chart - Time series
+    html.Div([
+        html.H1("Airports Data Visualization"),
+        html.P("Select Airports:", className="control_label"),
+        dcc.Dropdown(
+            id="airport_selector",
+            options=[{"label": i, "value": i} for i in sorted(flights_per_airport['US_airport_code'].unique())],
+            multi=True,
+            value=["ATL", "ORD", "DFW", "DEN", "LAX"],  # Preselect the top 5 airports with the highest total flights
+            className="dcc_control",
+        ),
+        html.P("Select Year:", className="control_label"),
+        dcc.Dropdown(
+            id="year_selector",
+            options=[{"label": year, "value": year} for year in flights_per_airport['Date'].dt.year.unique()] + [{"label": "All Years", "value": "all"}],
+            value="all",  # Preselect the "All Years" option
+            className="dcc_control",
+        )
+    ],
+    className="pretty_container two columns",
+    id="cross-filter-options",
+    ),
+    html.Div(
+        [dcc.Graph(id="time_series_graph")],
+        className="pretty_container ten columns",
+    ),
+    
+    # Second chart - Boxplot
+    html.Div([
+        dcc.Dropdown(
+            id="airport-dropdown",
+            options=[{"label": i, "value": i} for i in sorted(df_flights_count['index'].unique())],
+            value=df_flights_count['index'].head(10).tolist(),  # Default value is the top 10 airports
+            multi=True
+        ),
+    ],
+    className="pretty_container six columns",
+    ),
+    html.Div(
+        [dcc.Graph(id="boxplot")],
+        className="pretty_container six columns",
+    ),
+    
+    # Third chart - Barplot
+    html.Div([
+        dcc.Dropdown(
+            id="airport-dropdown2",
+            options=[{"label": i, "value": i} for i in sorted(df_flights_count['index'].unique())],
+            value=df_flights_count['index'].head(10).tolist(),  # Default value is the top 10 airports
+            multi=True
+        ),
+    ],
+    className="pretty_container six columns",
+    ),
+    html.Div(
+        [dcc.Graph(id="barplot")],
+        className="pretty_container six columns",
+    ),
+])
+
+# Define the callback for the time series graph
+@app.callback(
+    Output("time_series_graph", "figure"),
+    [Input("airport_selector", "value"), Input("year_selector", "value")]
+)
+def update_time_series(selected_airports, selected_year):
+    fig = go.Figure()
+
+    filtered_data = flights_per_airport[flights_per_airport['US_airport_code'].isin(selected_airports)]
+
+    # Filter data by the selected year, if applicable
+    if selected_year != "all":
+        filtered_data = filtered_data[filtered_data['Date'].dt.year == selected_year]
+
+    for airport in selected_airports:
+        fig.add_trace(go.Scatter(
+            x=filtered_data[filtered_data['US_airport_code'] == airport]['Date'],
+            y=filtered_data[filtered_data['US_airport_code'] == airport]['Total_Flights'],
+            name=airport,
+            mode='lines'
+        ))
+
+    fig.update_layout(
+        title='Flights per Airport over Time',
+        xaxis_title='Date',
+        yaxis_title='Total Flights',
+        legend_title_text='Airport',
+        plot_bgcolor='rgba(245, 245, 245, 1)',
+        hovermode='x unified',
+        uirevision='same',  # Preserve the user's zoom level when updating the graph
+        yaxis=dict(range=[0, None]),  # Set the minimum value of the y-axis to 0
+        autosize=True,  # Enable autosize to make the graph responsive
+        margin=dict(l=50, r=50, b=50, t=50, pad=4),
+        height=400,  # Set a fixed height for the plot in pixels
+    )
+
+    fig.update_traces(
+        line=dict(width=2),
+        marker=dict(size=6, symbol='circle', line=dict(width=1, color='black'))
+    )
+
+    return fig
+
+# Define callback for updating the boxplot based on selected airports
+@app.callback(
+    Output("boxplot", "figure"),
+    [Input("airport-dropdown", "value")]
+)
+def update_boxplot(selected_airports):
+    filtered_df = df_airplanes[df_airplanes["US_airport_code"].isin(selected_airports) | df_airplanes["Foreign_airport_code"].isin(selected_airports)]
+
+    fig = px.box(filtered_df, x="Total_Flights", title="Boxplot of Total Flights")
+
+    return fig
+
+# Define callback for updating the barplot based on selected airports
+@app.callback(
+    Output("barplot", "figure"),
+    [Input("airport-dropdown2", "value")]
+)
+def update_barplot(selected_airports):
+    filtered_df = df_flights_count[df_flights_count["index"].isin(selected_airports)]
+
+    fig = px.bar(filtered_df, x="index", y="Total_Flights", title="Barplot of Total Flights", 
+                 labels={"index": "Airports"},  # Change x-axis title
+                 color='index',  # Use different colors for each airport
+                 color_discrete_sequence=px.colors.qualitative.Set2 # Choose a color palette
+                 )
+
+    return fig
+
+# Run the app
+if __name__ == "__main__":
+    app.run_server(debug= True ,port=8055)
+
+
+
+
+
+
+
