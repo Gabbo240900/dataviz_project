@@ -224,31 +224,29 @@ import networkx as nx
 # Get the top 15 airports for total flights
 top_15_airports = df_flights_count.head(15)
 
+# Add the city names for each airport code
+airport_cities = {
+    'MIA': 'Miami',
+    'YYZ': 'Toronto',
+    'JFK': 'New York',
+    'LAX': 'Los Angeles',
+    'ORD': 'Chicago',
+    'EWR': 'Newark',
+    'IAH': 'Houston',
+    'MEX': 'Mexico City',
+    'ATL': 'Atlanta',
+    'LHR': 'London',
+    'YUL': 'Montreal',
+    'YVR': 'Vancouver',
+    'DFW': 'Dallas',
+    'SFO': 'San Francisco',
+    'NRT': 'Tokyo',
+}
+
 # Create a subset of the original DataFrame containing only the top 15 airports
 mask_us = df_airplanes['US_airport_code'].isin(top_15_airports['index'])
 mask_foreign = df_airplanes['Foreign_airport_code'].isin(top_15_airports['index'])
 subset_airplanes = df_airplanes[mask_us & mask_foreign]
-sub_us = subset_airplanes.iloc[:,[4,-1]]
-sub_us.columns=('code','flights')
-sub_foreign = subset_airplanes.iloc[:,[7,-1]]
-sub_foreign.columns=('code','flights')
-
-df_names = df_heat_map.iloc[:,[1,3]]
-df_names.columns=('code','flights')
-
-
-sub_us = pd.merge(sub_us, df_names, on='code')
-sub_foreign = pd.merge(sub_foreign, df_names, on='code')
-
-airports_names = pd.concat([sub_us, sub_foreign])
-airports_names = airports_names.iloc[:,[0,2]]
-airports_names.drop_duplicates(inplace=True)
-airports_names.columns=('code', 'city')
-
-
-
-
-
 
 # Create an empty graph
 G = nx.Graph()
@@ -318,12 +316,12 @@ airport_total_flights = pd.concat([us_airport_total_flights, foreign_airport_tot
 for node in G.nodes():
     x, y = pos[node]
     total_flights = airport_total_flights[node]
+    city = airport_cities[node]
     node_trace['x'] += tuple([x])
     node_trace['y'] += tuple([y])
     node_trace['text'] += tuple([node])
-    node_trace['hovertext'] += tuple([f'{node}: {total_flights} total flights'])
+    node_trace['hovertext'] += tuple([f'{city}: {total_flights} Flights '])
 
-    
 # Create the legend traces
 legend_trace_1 = go.Scatter(
     x=[None],
