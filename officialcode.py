@@ -277,23 +277,30 @@ node_trace = go.Scatter(
     x=[],
     y=[],
     text=[],
+    hovertext=[],
     mode='markers+text',
     hoverinfo='text',
     marker=dict(
         color='#1D92ED',
         size=node_sizes,
-        line=dict(width=2,color='#6EC1E4'),
+        line=dict(width=2, color='#6EC1E4'),
     ),
     textposition='middle center',
     textfont=dict(size=8, color='white', family="Arial"),
     showlegend=False
 )
 
+us_airport_total_flights = subset_airplanes.groupby(['US_airport_code']).sum()['Total_Flights']
+foreign_airport_total_flights = subset_airplanes.groupby(['Foreign_airport_code']).sum()['Total_Flights']
+airport_total_flights = pd.concat([us_airport_total_flights, foreign_airport_total_flights])
+
 for node in G.nodes():
     x, y = pos[node]
+    total_flights = airport_total_flights[node]
     node_trace['x'] += tuple([x])
     node_trace['y'] += tuple([y])
     node_trace['text'] += tuple([node])
+    node_trace['hovertext'] += tuple([f'{node}: {total_flights} total flights'])
 
 # Create the legend traces
 legend_trace_1 = go.Scatter(
