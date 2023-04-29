@@ -190,7 +190,10 @@ df_airplanes['Date'] = pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y')
 
 # Group the data by airport and date and aggregate the total number of flights
 flights_per_airport = df_airplanes.groupby(['US_airport_code', 'Date'])['Total_Flights'].sum().reset_index()
+flight_per_airp_foreign = df_airplanes.groupby(['Foreign_airport_code', 'Date'])['Total_Flights'].sum().reset_index()
+flight_per_airp_foreign.columns = ('US_airport_code', 'Date' , 'Total_Flights')
 
+flights_per_airport = pd.concat([flights_per_airport,flight_per_airp_foreign])
 # Reindex the data to include missing months with 0 flights
 flights_per_airport = flights_per_airport.set_index(['US_airport_code', 'Date']).unstack(level=-1, fill_value=0).stack().reset_index()
 
