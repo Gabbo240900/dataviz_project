@@ -228,6 +228,27 @@ top_15_airports = df_flights_count.head(15)
 mask_us = df_airplanes['US_airport_code'].isin(top_15_airports['index'])
 mask_foreign = df_airplanes['Foreign_airport_code'].isin(top_15_airports['index'])
 subset_airplanes = df_airplanes[mask_us & mask_foreign]
+sub_us = subset_airplanes.iloc[:,[4,-1]]
+sub_us.columns=('code','flights')
+sub_foreign = subset_airplanes.iloc[:,[7,-1]]
+sub_foreign.columns=('code','flights')
+
+df_names = df_heat_map.iloc[:,[1,3]]
+df_names.columns=('code','flights')
+
+
+sub_us = pd.merge(sub_us, df_names, on='code')
+sub_foreign = pd.merge(sub_foreign, df_names, on='code')
+
+airports_names = pd.concat([sub_us, sub_foreign])
+airports_names = airports_names.iloc[:,[0,2]]
+airports_names.drop_duplicates(inplace=True)
+airports_names.columns=('code', 'city')
+
+
+
+
+
 
 # Create an empty graph
 G = nx.Graph()
@@ -302,6 +323,7 @@ for node in G.nodes():
     node_trace['text'] += tuple([node])
     node_trace['hovertext'] += tuple([f'{node}: {total_flights} total flights'])
 
+    
 # Create the legend traces
 legend_trace_1 = go.Scatter(
     x=[None],
