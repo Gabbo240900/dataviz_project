@@ -120,17 +120,9 @@ plt.show()
 
 
 
-<<<<<<< HEAD
+
 
 # ----- Now we will start creating a heatmap of the Airports based on flights  -----
-=======
-# ----- Now we will start creating a heatmap of the US Flights based on total flights -----
-df_us_flights.reset_index(inplace=True)  # reset index
-df_us_flights.columns = ['ariport_code', 'count']
-df_foreign_flights.reset_index(inplace=True)
-df_foreign_flights.columns = ['ariport_code', 'count']
-df_flights_all = pd.concat([df_us_flights, df_foreign_flights])
->>>>>>> e4b10f5fa83a08d492a70782c127c0e69057377b
 
 df_us_flights.reset_index(inplace=True)  # reset index of us airports 
 df_us_flights.columns = ['ariport_code', 'count'] #Select only columns we need
@@ -139,6 +131,7 @@ df_foreign_flights.columns = ['ariport_code', 'count'] #select only specific col
 df_flights_all = pd.concat([df_us_flights, df_foreign_flights]) #concatenate the two
  
 # We retrieved the coordinates by using another dataframe that links the airport identification name to the coordinates
+
 # pip install airportsdata
 import airportsdata  # new library for retrieving the coordinates
 
