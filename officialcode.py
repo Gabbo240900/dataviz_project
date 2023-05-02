@@ -58,6 +58,17 @@ df_airplanes = df_airplanes.drop('type', axis=1)
 # Convert 'Date' column to datetime format
 df_airplanes['Date'] = (pd.to_datetime(df_airplanes['Date'], format='%m/%d/%Y', errors='coerce'))
 
+# Use the darkgrid theme with a transparent background
+sns.set_theme(style="darkgrid")
+plt.rcParams['axes.facecolor'] = 'none'
+plt.rcParams['figure.facecolor'] = 'none'
+
+# Set the text color to white
+plt.rcParams['text.color'] = 'white'
+plt.rcParams['axes.labelcolor'] = 'white'
+plt.rcParams['xtick.color'] = 'white'
+plt.rcParams['ytick.color'] = 'white'
+
 # Prepare data for barplot
 df_us_flights = df_airplanes[['US_airport_code', 'Total_Flights']].groupby(by='US_airport_code').sum()
 df_foreign_flights = df_airplanes[['Foreign_airport_code', 'Total_Flights']].groupby(by='Foreign_airport_code').sum()
@@ -65,40 +76,61 @@ df_flights_count = pd.concat([df_foreign_flights, df_us_flights])
 df_flights_count.reset_index(inplace=True)
 df_flights_count.sort_values(by='Total_Flights', ascending=False, inplace=True)
 
+# Set the size of the figure for the bar plot
+plt.figure(figsize=(12, 6))
 
 # Get the top 10 airport codes with the highest number of flights
 top_10 = df_flights_count.head(10)
 
-# Set the size of the figure for the bar plot
-plt.figure(figsize=(12, 6))
-
 # Create a bar plot of the top 10 airport codes with the highest number of flights
-sns.barplot(data=top_10, x='index', y='Total_Flights')
+barplot = sns.barplot(data=top_10, x='index', y='Total_Flights')
+barplot.set_facecolor('none')
 plt.ticklabel_format(style='plain', axis='y')
-plt.ylabel('Flights')
-plt.xlabel('Top 10 Airports')
-plt.title('Top 10 Airports in Flights')
+plt.ylabel('Flights', fontsize=16)
+plt.xlabel('Top 10 Airports', fontsize=16)
+plt.title('Top 10 Airports in Flights', fontsize=16, fontweight='bold')
+
+# Make the lines delimiting the y-axis values thinner
+plt.grid(axis='y', linewidth=0.6)
 
 # Display the bar plot
 plt.show()
 
+
 # Set the size of the figure for the box plot
 plt.figure(figsize=(12, 6))
 
-# Create a box plot of the 'Total_Flights' column
-sns.boxplot(x='Total_Flights', data=df_airplanes)
+# Create a dict with the color for the fliers
+flierprops = dict(markerfacecolor='lightblue', markeredgecolor='lightblue')
+
+# Create a box plot of the 'Total_Flights' column with a custom color
+boxplot = sns.boxplot(x='Total_Flights', data=df_airplanes, color='lightblue', flierprops=flierprops)
+boxplot.set_facecolor('none')
 
 # Set the title and labels for the box plot
-plt.title('Box Plot of Total Flights')
-plt.xlabel('Total Flights')
+plt.title('Box Plot of Total Flights', fontsize=16, fontweight='bold')
+plt.xlabel('Total Flights', fontsize=16)
 
 # Display the box plot
+plt.rcParams['text.color'] = 'white'
+plt.rcParams['axes.labelcolor'] = 'white'
+plt.rcParams['xtick.color'] = 'white'
+plt.rcParams['ytick.color'] = 'white'
 plt.show()
 
 
 
+<<<<<<< HEAD
 
 # ----- Now we will start creating a heatmap of the Airports based on flights  -----
+=======
+# ----- Now we will start creating a heatmap of the US Flights based on total flights -----
+df_us_flights.reset_index(inplace=True)  # reset index
+df_us_flights.columns = ['ariport_code', 'count']
+df_foreign_flights.reset_index(inplace=True)
+df_foreign_flights.columns = ['ariport_code', 'count']
+df_flights_all = pd.concat([df_us_flights, df_foreign_flights])
+>>>>>>> e4b10f5fa83a08d492a70782c127c0e69057377b
 
 df_us_flights.reset_index(inplace=True)  # reset index of us airports 
 df_us_flights.columns = ['ariport_code', 'count'] #Select only columns we need
