@@ -98,13 +98,14 @@ plt.show()
 
 
 
-# ----- Now we will start creating a heatmap of the US Flights based on total flights -----
-df_us_flights.reset_index(inplace=True)  # reset index
-df_us_flights.columns = ['ariport_code', 'count']
-df_foreign_flights.reset_index(inplace=True)
-df_foreign_flights.columns = ['ariport_code', 'count']
-df_flights_all = pd.concat([df_us_flights, df_foreign_flights])
+# ----- Now we will start creating a heatmap of the Airports based on flights  -----
 
+df_us_flights.reset_index(inplace=True)  # reset index of us airports 
+df_us_flights.columns = ['ariport_code', 'count'] #Select only columns we need
+df_foreign_flights.reset_index(inplace=True) #reset index of the foreign airports
+df_foreign_flights.columns = ['ariport_code', 'count'] #select only specific columns
+df_flights_all = pd.concat([df_us_flights, df_foreign_flights]) #concatenate the two
+ 
 # We retrieved the coordinates by using another dataframe that links the airport identification name to the coordinates
 # pip install airportsdata
 import airportsdata  # new library for retrieving the coordinates
@@ -181,7 +182,7 @@ map_obj.save("us_flights_map.html")
 
 
 
-######################### Time series #######################
+######################### Year analysis series #######################
 
 import plotly.graph_objs as go
 
@@ -253,7 +254,7 @@ G = nx.Graph()
 
 # Add edges between airports based on the subset DataFrame
 for _, row in subset_airplanes.iterrows():
-    G.add_edge(row['US_airport_code'], row['Foreign_airport_code'], weight=row['Total_Flights'])
+    G.add_edge(row['US_airport_code'], row['Foreign_airport_code'], weight=row['Total_Flights']) #an edge will be addedd for the two airports in the same row
 
 # Define the layout for the nodes
 pos = nx.circular_layout(G)
@@ -271,9 +272,12 @@ def weight_to_color(weight):
     else:
         return 'red', 1.5
 
+#edge traces and node traces are used to create an interactive network graph. 
 # Create the edge traces
 edge_traces = []
 
+#the edge trace not only colors the edges based on the function defined aboce, but will also define 
+# they way it looks
 for edge in G.edges(data=True):
     x0, y0 = pos[edge[0]]
     x1, y1 = pos[edge[1]]
@@ -292,6 +296,8 @@ for edge in G.edges(data=True):
     edge_traces.append(edge_trace)
 
 # Create the node trace
+# with the node trace we define the text over each node and the sizes. 
+#we also specify that we want to show a text when hovering with the mouse.  such text will be defined later
 node_trace = go.Scatter(
     x=[],
     y=[],
@@ -309,10 +315,13 @@ node_trace = go.Scatter(
     showlegend=False
 )
 
+#From this we create a new dataset to retrieve the information for the hovering and interaction with the graph
 us_airport_total_flights = subset_airplanes.groupby(['US_airport_code']).sum()['Total_Flights']
 foreign_airport_total_flights = subset_airplanes.groupby(['Foreign_airport_code']).sum()['Total_Flights']
 airport_total_flights = pd.concat([us_airport_total_flights, foreign_airport_total_flights])
 
+#this function will make sure that each node has the correct name and 
+# that it will display both the number of flights and the city when hovering with the mouse
 for node in G.nodes():
     x, y = pos[node]
     total_flights = airport_total_flights[node]
@@ -376,7 +385,7 @@ fig.write_html('output_graph.html')
 
 
 
-### LET'S CREATE THE APP !!! ###
+### LET'S CREATE THE DASH-APP !!! ###
 
 import plotly.graph_objects as go
 import pandas as pd
@@ -390,28 +399,28 @@ external_stylesheets = [dbc.themes.BOOTSTRAP]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 # Define the layout
-app.layout = html.Div([
+app.layout = html.Div([ # this is the .Div for the entire web page
     
     # First chart - Time series
-    html.Div([
-        html.H1("Airports Data Visualization"),
-        html.P("Select Airports:", className="control_label"),
-        dcc.Dropdown(
+    html.Div([ # .Div for the line plot (year analysis)
+        html.H1("Airports Data Visualization"), #set the title of the entire webpage
+        html.P("Select Airports:", className="control_label"), # title for the dropdown menu
+        dcc.Dropdown( #create the dropdown menu
             id="airport_selector",
             options=[{"label": i, "value": i} for i in sorted(flights_per_airport['US_airport_code'].unique())],
             multi=True,
             value=["ATL", "ORD", "DFW", "DEN", "LAX"],  # Preselect the top 5 airports with the highest total flights
             className="dcc_control",
         ),
-        html.P("Select Year:", className="control_label"),
-        dcc.Dropdown(
+        html.P("Select Year:", className="control_label"), #title for the year dropdown menu
+        dcc.Dropdown( #create year dropdown menu
             id="year_selector",
             options=[{"label": year, "value": year} for year in flights_per_airport['Date'].dt.year.unique()] + [{"label": "All Years", "value": "all"}],
             value="all",  # Preselect the "All Years" option
             className="dcc_control",
         )
     ],
-    className="pretty_container two columns",
+    className="pretty_container two columns", #used to call later the .Div and isert the chart
     id="cross-filter-options",
     ),
     html.Div(
@@ -419,7 +428,7 @@ app.layout = html.Div([
         className="pretty_container ten columns",
     ),
     
-    # Second chart - Boxplot
+    # Second chart - Boxplot, same structure as above 
     html.Div([
         dcc.Dropdown(
             id="airport-dropdown",
@@ -435,7 +444,7 @@ app.layout = html.Div([
         className="pretty_container six columns",
     ),
     
-    # Third chart - Barplot
+    # Third chart - Barplot; last .Div for the barplot, equal to those before
     html.Div([
         dcc.Dropdown(
             id="airport-dropdown2",
@@ -453,11 +462,12 @@ app.layout = html.Div([
 ])
 
 # Define the callback for the time series graph
+# this is used to actually display the previous chart
 @app.callback(
     Output("time_series_graph", "figure"),
     [Input("airport_selector", "value"), Input("year_selector", "value")]
 )
-def update_time_series(selected_airports, selected_year):
+def update_time_series(selected_airports, selected_year): #function that updates the timeseries based on selected airport code
     fig = go.Figure()
 
     filtered_data = flights_per_airport[flights_per_airport['US_airport_code'].isin(selected_airports)]
